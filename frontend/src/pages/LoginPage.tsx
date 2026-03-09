@@ -1,8 +1,34 @@
-import { Link } from "react-router-dom";
+import { useState, type FormEvent } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "../components/Button";
 import { ArrowRight } from "lucide-react";
+import { loginUser } from "../api/auth";
+import { useAuth } from "../context/AuthContext";
 
 const LoginPage = () => {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { setUser } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const data = await loginUser(username, password);
+      setUser(data.user);
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Login failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <>
       <div className="mx-5 flex  justify-between">
@@ -14,19 +40,22 @@ const LoginPage = () => {
         </Link>
       </div>
       <form
-        action="/login"
-        method="POST"
+        onSubmit={handleSubmit}
         className="flex items-center justify-center"
       >
         <div className="mx-5  flex-col gap-4 flex items-center justify-center">
           <h2 className="text-2xl font-bold mb-5">Login to your account</h2>
 
+          {error && <p className="text-red-500 font-medium">{error}</p>}
+
           <div className="flex flex-col gap-2">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="username">Username</label>
             <input
-              type="email"
-              id="email"
-              name="email"
+              type="text"
+              id="username"
+              name="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               required
               className="border-2 border-zinc-400 px-2 py-1"
             />
@@ -37,6 +66,8 @@ const LoginPage = () => {
               type="password"
               id="password"
               name="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               required
               className="border-2 border-zinc-400 px-2 py-1"
             />
@@ -44,8 +75,9 @@ const LoginPage = () => {
           <button
             className="flex gap-2 justify-center items-center bg-indigo-200 mb-10 text-zinc-600 font-bold px-4 py-2 border-2 border-black  rounded-none transition-all duration-200 hover:shadow-[-4px_4px_0px_0px_rgba(240,65,12,1),-8px_8px_0px_0px_rgba(0,128,0,1)] hover:translate-x-2 hover:-translate-y-2 cursor-pointer max-w-50"
             type="submit"
+            disabled={loading}
           >
-            Login
+            {loading ? "Logging in..." : "Login"}
           </button>
         </div>
       </form>
