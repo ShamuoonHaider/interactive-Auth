@@ -1,26 +1,38 @@
-import { useState, type FormEvent } from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "../components/Button";
 import { ArrowRight } from "lucide-react";
 import { loginUser } from "../api/auth";
 import { useAuth } from "../context/AuthContext";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+const LoginSchema = z.object({
+  username: z.string().min(3, "Username too short"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
+
+type LoginForm = z.infer<typeof LoginSchema>;
 
 const LoginPage = () => {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { setUser } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(LoginSchema),
+  });
 
+  const onSubmit = async (data: LoginForm) => {
     try {
-      const data = await loginUser(username, password);
-      setUser(data.user);
+      const response = await loginUser(data.username, data.password);
+      setUser(response.user);
       navigate("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
@@ -40,13 +52,11 @@ const LoginPage = () => {
         </Link>
       </div>
       <form
-        onSubmit={handleSubmit}
+        onSubmit={handleSubmit(onSubmit)}
         className="flex items-center justify-center"
       >
         <div className="mx-5  flex-col gap-4 flex items-center justify-center">
           <h2 className="text-2xl font-bold mb-5">Login to your account</h2>
-
-          {error && <p className="text-red-500 font-medium">{error}</p>}
 
           <div className="flex flex-col gap-2">
             <label htmlFor="username">Username</label>
@@ -54,11 +64,12 @@ const LoginPage = () => {
               type="text"
               id="username"
               name="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              {...register("username")}
               required
               className="border-2 border-zinc-400 px-2 py-1"
             />
+            {errors.username && <p>{errors.username.message}</p>}
+            {error && <p>{error}</p>}
           </div>
           <div className="flex flex-col gap-2">
             <label htmlFor="password">Password</label>
@@ -66,8 +77,7 @@ const LoginPage = () => {
               type="password"
               id="password"
               name="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              {...register("password")}
               required
               className="border-2 border-zinc-400 px-2 py-1"
             />
